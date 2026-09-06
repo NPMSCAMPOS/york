@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  children ChildProfile[]
+}
+
+model ChildProfile {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+
+  user User           @relation(fields: [userId], references: [id])
+  york YorkCharacter?
+}
+
+model YorkCharacter {
+  id             String   @id @default(uuid())
+  childProfileId String   @unique
+  name           String
+  appearance     String
+  ageGroup       String?
+  createdAt      DateTime @default(now())
+
+  childProfile ChildProfile @relation(fields: [childProfileId], references: [id])
+}
