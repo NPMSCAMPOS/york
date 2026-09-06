@@ -3,38 +3,56 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
+  id        String     @id @default(cuid())
+  email     String     @unique
   password  String
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  children ChildProfile[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  stories   Story[]
+  quizResults QuizResult[]
 }
 
-model ChildProfile {
-  id        String   @id @default(uuid())
+model Story {
+  id        String     @id @default(cuid())
+  title     String
+  content   String
   userId    String
-  name      String
-  createdAt DateTime @default(now())
-
-  user User           @relation(fields: [userId], references: [id])
-  york YorkCharacter?
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
 model YorkCharacter {
-  id             String   @id @default(uuid())
-  childProfileId String   @unique
-  name           String
-  appearance     String
-  ageGroup       String?
-  createdAt      DateTime @default(now())
+  id        String     @id @default(cuid())
+  name      String
+  description String
+  imageUrl  String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
 
-  childProfile ChildProfile @relation(fields: [childProfileId], references: [id])
+model Quiz {
+  id        String     @id @default(cuid())
+  title     String
+  questions String     @db.Text
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  results   QuizResult[]
+}
+
+model QuizResult {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quizId    String
+  quiz      Quiz       @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  score     Int
+  answers   String     @db.Text
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
