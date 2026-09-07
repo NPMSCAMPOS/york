@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.routes.js';
 import yorkCharactersRoutes from './routes/yorkCharacters.js';
 import storiesRoutes from './routes/stories.js';
 import quizRoutes from './routes/quiz.js';
+import healthRoutes from './routes/health.routes.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -25,8 +26,17 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100, trustProxy: true }));
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+// Health check endpoints - sem rate limiting
+app.use('/health', healthRoutes);
+app.use('/api/health', healthRoutes);
+
+// Endpoint de health simples (compatibilidade)
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'York Backend',
+    timestamp: new Date().toISOString()
+  });
 });
 
 app.use('/api/v1/auth', authRoutes);

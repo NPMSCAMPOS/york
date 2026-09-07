@@ -16,40 +16,52 @@ const authSchema = Joi.object({
 // Signup endpoint
 router.post('/signup', async (req, res) => {
   try {
+    console.log('📝 [SIGNUP] Iniciando signup...');
     const { error, value } = authSchema.validate(req.body);
     if (error) {
+      console.log('❌ [SIGNUP] Validação falhou:', error.details[0].message);
       return res.status(400).json({ error: error.details[0].message });
     }
 
     const { email, password } = value;
+    console.log('✅ [SIGNUP] Validação OK - Email:', email);
 
     // Check if user already exists
+    console.log('🔍 [SIGNUP] Verificando se usuário já existe...');
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
 
     if (existingUser) {
+      console.log('❌ [SIGNUP] Usuário já existe:', email);
       return res.status(409).json({ error: 'User already exists' });
     }
+    console.log('✅ [SIGNUP] Usuário não existe - prosseguindo');
 
     // Hash password
+    console.log('🔐 [SIGNUP] Fazendo hash da senha...');
     const hashedPassword = await bcrypt.hash(password, 10);
+    console.log('✅ [SIGNUP] Senha hasheada com sucesso');
 
     // Create user
+    console.log('💾 [SIGNUP] Criando usuário no banco de dados...');
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
       },
     });
+    console.log('✅ [SIGNUP] Usuário criado com sucesso:', user.id);
 
     // Generate JWT token
+    console.log('🔑 [SIGNUP] Gerando token JWT...');
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
 
+    console.log('✅ [SIGNUP] Signup concluído com sucesso');
     res.status(201).json({
       token,
       user: {
@@ -58,8 +70,30 @@ router.post('/signup', async (req, res) => {
       },
     });
   } catch (err) {
-    console.error('Signup error:', err);
-    res.status(500).json({ error: 'Failed to create user' });
+    console.error('❌ [SIGNUP] ERRO CRÍTICO:');
+    console.error('  📌 Mensagem:', err.message);
+    console.error('  📌 Código:', err.code);
+    console.error('  📌 Meta:', err.meta);
+    console.error('  📌 Stack:', err.stack);
+    console.error('  📌 Cliente Prisma:', err.clientVersion);
+
+    // Log adicional para diagnóstico
+    if (err.code === 'P2002') {
+      console.error('  💡 DICA: Constraint único violado - campo já existe');
+    } else if (err.code === 'P2021') {
+      console.error('  💡 DICA: Campo não existe no schema do banco');
+    } else if (err.code === 'P1000') {
+      console.error('  💡 DICA: Erro de autenticação ao banco de dados');
+    } else if (err.code === 'P1001') {
+      console.error('  💡 DICA: Não consegue alcançar o servidor de banco de dados');
+    }
+
+    res.status(500).json({
+      error: 'Failed to create user',
+      details: err.message,
+      code: err.code,
+      meta: err.meta
+    });
   }
 });
 
