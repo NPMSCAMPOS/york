@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: york
+    env: node
+    plan: free
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        value: ${JWT_SECRET}
+      - key: CORS_ORIGIN
+        value: https://york-snowy.vercel.app,http://localhost:3000
+    databases:
+      - name: york-db
+
+databases:
+  - name: york-db
+    databaseName: york
+    user: yorkuser
+    region: ohio
