@@ -19,3 +19,4 @@ services:
           property: connectionString
     databases:
       - name: york-db
+
