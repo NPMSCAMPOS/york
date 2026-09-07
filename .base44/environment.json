@@ -1,0 +1,12 @@
+{
+  "previewPort": 3000,
+  "healthPath": "/",
+  "startCommand": "docker compose -f docker-compose.base44.yml up -d",
+  "secrets": [
+    {
+      "name": "CLAUDE_API_KEY",
+      "description": "Anthropic Claude API key for AI story/quiz generation. Get it from https://console.anthropic.com/settings/keys. The backend boots without it, but story and quiz generation features require it.",
+      "requiredAtBoot": false
+    }
+  ]
+}
