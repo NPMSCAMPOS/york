@@ -1,50 +1,34 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
-// Health check endpoint - testa conectividade ao banco
+// Health check endpoint - test database connectivity
 router.get('/db', async (req, res) => {
-  console.log('🏥 [HEALTH] Verificando saúde do banco de dados...');
-
   try {
-    // Teste simples de conectividade
-    console.log('📡 [HEALTH] Executando SELECT 1 para testar conexão...');
     const result = await prisma.$queryRaw`SELECT 1`;
-
-    console.log('✅ [HEALTH] Banco de dados conectado com sucesso');
 
     res.status(200).json({
       status: 'OK',
       database: 'connected',
       message: 'Database connection is working',
       timestamp: new Date().toISOString(),
-      queryResult: result
     });
   } catch (error) {
-    console.error('❌ [HEALTH] ERRO DE CONECTIVIDADE:');
-    console.error('  📌 Mensagem:', error.message);
-    console.error('  📌 Código:', error.code);
-    console.error('  📌 Meta:', error.meta);
-    console.error('  📌 Stack:', error.stack);
+    console.error('Database health check failed:', error.message);
 
     res.status(503).json({
       status: 'ERROR',
       database: 'disconnected',
       message: 'Database connection failed',
       error: error.message,
-      code: error.code,
-      meta: error.meta,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   }
 });
 
-// Health check geral da aplicação
+// General health check
 router.get('/', (req, res) => {
-  console.log('🏥 [HEALTH] Verificação geral da aplicação...');
-
   res.status(200).json({
     status: 'OK',
     service: 'York Backend',
@@ -52,9 +36,12 @@ router.get('/', (req, res) => {
     environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString(),
     endpoints: {
-      auth: '/api/auth/signup, /api/auth/login, /api/auth/logout',
-      health: '/api/health/, /api/health/db'
-    }
+      auth: '/api/v1/auth/signup, /api/v1/auth/login, /api/v1/auth/logout',
+      stories: '/api/v1/stories',
+      quiz: '/api/v1/quiz',
+      characters: '/api/v1/york-characters',
+      health: '/api/v1/health, /api/v1/health/db',
+    },
   });
 });
 

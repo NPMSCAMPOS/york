@@ -1,35 +1,19 @@
 import express from 'express';
-import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
-// Middleware to verify JWT token
-const verifyToken = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    req.userId = decoded.userId;
-    next();
-  } catch (err) {
-    return res.status(403).json({ error: 'Invalid token' });
-  }
-};
-
-// Get all stories for a user
+// Get all stories
 router.get('/', async (req, res) => {
   try {
     const stories = await prisma.story.findMany({
       include: { user: { select: { email: true } } },
+      orderBy: { createdAt: 'desc' },
     });
     res.json(stories);
   } catch (err) {
-    console.error('Error fetching stories:', err);
+    console.error('Error fetching stories:', err.message);
     res.status(500).json({ error: 'Failed to fetch stories' });
   }
 });
@@ -49,13 +33,13 @@ router.get('/:id', async (req, res) => {
 
     res.json(story);
   } catch (err) {
-    console.error('Error fetching story:', err);
+    console.error('Error fetching story:', err.message);
     res.status(500).json({ error: 'Failed to fetch story' });
   }
 });
 
 // Create story (requires authentication)
-router.post('/', verifyToken, async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   try {
     const { title, content } = req.body;
 
@@ -73,13 +57,13 @@ router.post('/', verifyToken, async (req, res) => {
 
     res.status(201).json(story);
   } catch (err) {
-    console.error('Error creating story:', err);
+    console.error('Error creating story:', err.message);
     res.status(500).json({ error: 'Failed to create story' });
   }
 });
 
 // Update story
-router.put('/:id', verifyToken, async (req, res) => {
+router.put('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content } = req.body;
@@ -103,13 +87,13 @@ router.put('/:id', verifyToken, async (req, res) => {
 
     res.json(updatedStory);
   } catch (err) {
-    console.error('Error updating story:', err);
+    console.error('Error updating story:', err.message);
     res.status(500).json({ error: 'Failed to update story' });
   }
 });
 
 // Delete story
-router.delete('/:id', verifyToken, async (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -131,7 +115,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
 
     res.json({ message: 'Story deleted' });
   } catch (err) {
-    console.error('Error deleting story:', err);
+    console.error('Error deleting story:', err.message);
     res.status(500).json({ error: 'Failed to delete story' });
   }
 });

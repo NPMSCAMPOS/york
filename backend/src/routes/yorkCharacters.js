@@ -1,16 +1,18 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Get all York characters
 router.get('/', async (req, res) => {
   try {
-    const characters = await prisma.yorkCharacter.findMany();
+    const characters = await prisma.yorkCharacter.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
     res.json(characters);
   } catch (err) {
-    console.error('Error fetching characters:', err);
+    console.error('Error fetching characters:', err.message);
     res.status(500).json({ error: 'Failed to fetch characters' });
   }
 });
@@ -29,13 +31,13 @@ router.get('/:id', async (req, res) => {
 
     res.json(character);
   } catch (err) {
-    console.error('Error fetching character:', err);
+    console.error('Error fetching character:', err.message);
     res.status(500).json({ error: 'Failed to fetch character' });
   }
 });
 
-// Create character (admin only)
-router.post('/', async (req, res) => {
+// Create character (admin only - requires authentication for now)
+router.post('/', requireAuth, async (req, res) => {
   try {
     const { name, description, imageUrl } = req.body;
 
@@ -53,7 +55,7 @@ router.post('/', async (req, res) => {
 
     res.status(201).json(character);
   } catch (err) {
-    console.error('Error creating character:', err);
+    console.error('Error creating character:', err.message);
     res.status(500).json({ error: 'Failed to create character' });
   }
 });

@@ -16,6 +16,7 @@ export default function App() {
         <Route path="/" element={<LoginPage />} />
         <Route path="/criar-york" element={<ProtectedRoute><CreateYorkPage /></ProtectedRoute>} />
         <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
   );

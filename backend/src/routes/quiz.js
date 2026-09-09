@@ -1,33 +1,18 @@
 import express from 'express';
-import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
-
-// Middleware to verify JWT token
-const verifyToken = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    req.userId = decoded.userId;
-    next();
-  } catch (err) {
-    return res.status(403).json({ error: 'Invalid token' });
-  }
-};
 
 // Get all quizzes
 router.get('/', async (req, res) => {
   try {
-    const quizzes = await prisma.quiz.findMany();
+    const quizzes = await prisma.quiz.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
     res.json(quizzes);
   } catch (err) {
-    console.error('Error fetching quizzes:', err);
+    console.error('Error fetching quizzes:', err.message);
     res.status(500).json({ error: 'Failed to fetch quizzes' });
   }
 });
@@ -46,13 +31,13 @@ router.get('/:id', async (req, res) => {
 
     res.json(quiz);
   } catch (err) {
-    console.error('Error fetching quiz:', err);
+    console.error('Error fetching quiz:', err.message);
     res.status(500).json({ error: 'Failed to fetch quiz' });
   }
 });
 
-// Create quiz (admin only)
-router.post('/', async (req, res) => {
+// Create quiz (requires authentication)
+router.post('/', requireAuth, async (req, res) => {
   try {
     const { title, questions } = req.body;
 
@@ -69,13 +54,13 @@ router.post('/', async (req, res) => {
 
     res.status(201).json(quiz);
   } catch (err) {
-    console.error('Error creating quiz:', err);
+    console.error('Error creating quiz:', err.message);
     res.status(500).json({ error: 'Failed to create quiz' });
   }
 });
 
 // Submit quiz result (requires authentication)
-router.post('/:id/submit', verifyToken, async (req, res) => {
+router.post('/:id/submit', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { score, answers } = req.body;
@@ -95,22 +80,30 @@ router.post('/:id/submit', verifyToken, async (req, res) => {
 
     res.status(201).json(result);
   } catch (err) {
-    console.error('Error submitting quiz result:', err);
+    console.error('Error submitting quiz result:', err.message);
     res.status(500).json({ error: 'Failed to submit quiz result' });
   }
 });
 
 // Get quiz results for user
-router.get('/results/user', verifyToken, async (req, res) => {
+router.get('/results/user/:userId', requireAuth, async (req, res) => {
   try {
+    const { userId } = req.params;
+
+    // Users can only see their own results
+    if (req.userId !== userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
     const results = await prisma.quizResult.findMany({
-      where: { userId: req.userId },
+      where: { userId },
       include: { quiz: true },
+      orderBy: { createdAt: 'desc' },
     });
 
     res.json(results);
   } catch (err) {
-    console.error('Error fetching quiz results:', err);
+    console.error('Error fetching quiz results:', err.message);
     res.status(500).json({ error: 'Failed to fetch quiz results' });
   }
 });

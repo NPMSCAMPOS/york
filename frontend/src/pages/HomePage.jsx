@@ -1,81 +1,173 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { useYorkStore } from '../stores/yorkStore';
-
-const ACTIVITIES = [
-  { emoji: '📖', title: 'Historinhas', subtitle: 'Ouça uma aventura nova', classes: 'bg-amber-100' },
-  { emoji: '🎨', title: 'Desenhar', subtitle: 'Solte a imaginação', classes: 'bg-pink-100' },
-  { emoji: '🧠', title: 'Quiz', subtitle: 'Aprenda brincando', classes: 'bg-sky-100' },
-  { emoji: '💛', title: 'Meu Diário', subtitle: 'Como você está hoje?', classes: 'bg-green-100' },
-];
+import { api } from '../services/api';
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
-  const york = useYorkStore((s) => s.york);
-  const yorkId = useYorkStore((s) => s.yorkId);
-  const yorkLoading = useYorkStore((s) => s.loading);
-  const fetchYork = useYorkStore((s) => s.fetchYork);
+  const { user, logout } = useAuthStore();
+  const [characters, setCharacters] = useState([]);
+  const [stories, setStories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('characters');
 
   useEffect(() => {
-    if (!yorkId) {
-      navigate('/criar-york');
-      return;
-    }
-    fetchYork(yorkId).then((result) => {
-      if (!result.ok) {
-        navigate('/criar-york');
-      }
-    });
-  }, [yorkId]);
+    loadData();
+  }, []);
 
-  function handleLogout() {
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [charsData, storiesData] = await Promise.all([
+        api.getCharacters(),
+        api.getStories(),
+      ]);
+      setCharacters(charsData);
+      setStories(storiesData);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
     logout();
     navigate('/');
-  }
+  };
 
-  if (yorkLoading && !york) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-sky-50 to-amber-50">
-        <p className="text-slate-500 font-semibold">Carregando o seu York...</p>
-      </div>
-    );
-  }
+  const handleCreateYork = () => {
+    navigate('/criar-york');
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-sky-50 to-amber-50">
-      <header className="flex items-center justify-between px-6 py-5 max-w-4xl mx-auto">
-        <div className="flex items-center gap-3">
-          <div className="text-4xl">{york?.avatar || '🦒'}</div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+      {/* Header */}
+      <header className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 py-6 flex justify-between items-center">
           <div>
-            <div className="font-extrabold text-slate-800">Oi, {york?.name || 'amigo'}!</div>
-            <div className="text-xs text-slate-500">Responsável: {user?.email}</div>
+            <h1 className="text-3xl font-bold text-gray-900">🦁 York</h1>
+            <p className="text-sm text-gray-600">Bem-vindo, {user?.email}</p>
+          </div>
+          <div className="flex gap-4">
+            <button
+              onClick={handleCreateYork}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition"
+            >
+              + Criar York
+            </button>
+            <button
+              onClick={handleLogout}
+              className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition"
+            >
+              Sair
+            </button>
           </div>
         </div>
-        <button onClick={handleLogout} className="text-sm font-semibold text-slate-500 hover:text-slate-700">
-          Sair
-        </button>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 pb-16">
-        <h1 className="text-2xl font-extrabold text-slate-800 mb-1">O que vamos fazer hoje?</h1>
-        <p className="text-slate-500 mb-8">Escolha uma atividade para começar</p>
+      <main className="max-w-7xl mx-auto px-4 py-12">
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+            {error}
+          </div>
+        )}
 
-        <div className="grid grid-cols-2 gap-5">
-          {ACTIVITIES.map((a) => (
-            <button
-              key={a.title}
-              onClick={() => alert(`Atividade "${a.title}" em desenvolvimento 🚧`)}
-              className={`text-left rounded-3xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition ${a.classes}`}
-            >
-              <div className="text-5xl mb-3">{a.emoji}</div>
-              <div className="font-extrabold text-lg text-slate-800">{a.title}</div>
-              <div className="text-sm text-slate-500">{a.subtitle}</div>
-            </button>
-          ))}
-        </div>
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600 text-lg">Carregando...</p>
+          </div>
+        ) : (
+          <>
+            {/* Tabs */}
+            <div className="flex gap-4 mb-8 border-b border-gray-200">
+              <button
+                onClick={() => setActiveTab('characters')}
+                className={`pb-2 px-4 font-medium transition ${
+                  activeTab === 'characters'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Personagens ({characters.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('stories')}
+                className={`pb-2 px-4 font-medium transition ${
+                  activeTab === 'stories'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Histórias ({stories.length})
+              </button>
+            </div>
+
+            {/* Characters Tab */}
+            {activeTab === 'characters' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {characters.map((char) => (
+                  <div
+                    key={char.id}
+                    className="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden"
+                  >
+                    {char.imageUrl && (
+                      <img
+                        src={char.imageUrl}
+                        alt={char.name}
+                        className="w-full h-48 object-cover"
+                      />
+                    )}
+                    <div className="p-4">
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">
+                        {char.name}
+                      </h3>
+                      <p className="text-gray-600 text-sm mb-4">
+                        {char.description}
+                      </p>
+                      <button className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition">
+                        Ver Detalhes
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Stories Tab */}
+            {activeTab === 'stories' && (
+              <div className="space-y-4">
+                {stories.length === 0 ? (
+                  <p className="text-center text-gray-600 py-8">
+                    Nenhuma história criada ainda. Crie uma para começar!
+                  </p>
+                ) : (
+                  stories.map((story) => (
+                    <div
+                      key={story.id}
+                      className="bg-white rounded-lg shadow hover:shadow-lg transition p-6"
+                    >
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">
+                        {story.title}
+                      </h3>
+                      <p className="text-gray-600 mb-4 line-clamp-3">
+                        {story.content}
+                      </p>
+                      <div className="flex justify-between items-center text-sm text-gray-500">
+                        <span>Por: {story.user?.email}</span>
+                        <button className="text-blue-500 hover:text-blue-700 font-medium">
+                          Ler Mais
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </>
+        )}
       </main>
     </div>
   );

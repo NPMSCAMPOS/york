@@ -21,35 +21,34 @@ The story should be:
 - About the theme: ${theme}
 - In Portuguese`;
 
-  const startTime = performance.now();
-
-  const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 150,
-    system: {
-      type: 'text',
-      text: systemPrompt,
-      cache_control: { type: 'ephemeral' },
-    },
-    messages: [
-      {
-        role: 'user',
-        content: `Tell a story about ${yorkName} and "${theme}"`,
+  try {
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 150,
+      system: {
+        type: 'text',
+        text: systemPrompt,
+        cache_control: { type: 'ephemeral' },
       },
-    ],
-  });
+      messages: [
+        {
+          role: 'user',
+          content: `Tell a story about ${yorkName} and "${theme}"`,
+        },
+      ],
+    });
 
-  const elapsed = performance.now() - startTime;
-  const story = response.content[0].type === 'text' ? response.content[0].text : '';
+    const story = response.content[0].type === 'text' ? response.content[0].text : '';
 
-  console.log(`[Story] Generated in ${elapsed.toFixed(0)}ms, input: ${response.usage.input_tokens}, output: ${response.usage.output_tokens}`);
-
-  return {
-    story,
-    tokens: {
-      input: response.usage.input_tokens,
-      output: response.usage.output_tokens,
-    },
-    elapsed: elapsed.toFixed(0),
-  };
+    return {
+      story,
+      tokens: {
+        input: response.usage.input_tokens,
+        output: response.usage.output_tokens,
+      },
+    };
+  } catch (err) {
+    console.error('Error generating story:', err.message);
+    throw new Error('Failed to generate story');
+  }
 }
